@@ -18,8 +18,12 @@ const links =[];
 
 $('a').each((index,element) =>{
     const url = $(element).attr('href')
+     if(url){
+         const absoluteurl = new URL(url,'https://www.netflix.com/in/');
 
-links.push(url);
+         links.push(absoluteurl.href);
+     }
+
 })
 return links;
 
@@ -31,5 +35,7 @@ async function main(){
         console.log(links)
 
 }
+
+
 
 main();
