@@ -21,6 +21,9 @@ $('a').each((index,element) =>{
      if(url){
          const absoluteurl = new URL(url,'https://www.netflix.com/in/');
 
+         const regex = /^http:\/\/|^https:\/\//i.test(absoluteurl);
+
+        if(regex)
          links.push(absoluteurl.href);
      }
 
