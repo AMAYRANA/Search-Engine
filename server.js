@@ -1,6 +1,12 @@
 const axios = require('axios')
 const cheerio = require('cheerio')
 const fs = require('fs/promises');
+const { url } = require('inspector');
+
+
+//defining the queue array and visited set array
+ const queue =[];
+ const visited = new Set();//making visisted a set not as array bcu i have to continouusly check for values
 
 //1.this block converts url into html
 async function getdata(url){
@@ -16,7 +22,6 @@ async function getdata(url){
 //2.this block converts the given html and take out its links  and return it
 async function crawldata(html){
 const $ = cheerio.load(html);
-const links =[];
 
 $('a').each((index,element) =>{
     const url = $(element).attr('href')
@@ -26,35 +31,37 @@ $('a').each((index,element) =>{
          const regex = /^http:\/\/|^https:\/\//i.test(absoluteurl);
 
         if(regex)
-         links.push(absoluteurl.href);
+         queue.push(absoluteurl.href);
      }
 
 })
-return links;
 
 }
 //3.this block return the links of netflix main page
-async function returnlink(){ 
+async function returnlink()
+{ 
 try{
     const html = await getdata('https://www.netflix.com/in/');
-    const links = await crawldata(html);
-     return links;
+    await crawldata(html);
 }
 catch(err){
     console.log("error = ",err.message)
-} // 
+} 
 
 }
 
-//4.this block takes the links of the main netflix page converts them into html and take outs their links 
-async function crawlagain(newlink){
-    const links = await newlink();
-    const length = links.length;
 
-    const queue =[];
-    for(let i=0;i<length;i++){
+
+//4.this block takes the links of the main netflix page converts them into html and take outs their links 
+async function crawlagain(link){
+   // const links = await newlink();
+    //const length = link.length;
+
+    visited.add(link);//pushed the link which is used ,into visited array
+
+    //for(let i=0;i<length;i++){
     try{
-    const nxtlink = await getdata(links[i]);
+    const nxtlink = await getdata(link);//strips the html from link
 
     const $ = cheerio.load(nxtlink);
 
@@ -62,29 +69,35 @@ $('a').each((index,element) =>{
     const url = $(element).attr('href')
      if(url){
          //const absoluteurl = new URL(url,'https://www.netflix.com/in/');
-
          const regex = /^http:\/\/|^https:\/\//i.test(url);
 
-        if(regex)
+        if(regex &&  !queue.includes(url) )
          queue.push(url);
      }
 
 })}
 catch(error){
-    console.log('error ocoured =',error)
+    console.log('error ocoured =',error.message);
+    console.log('error ocoured =',error.code);
 }
-    }
-    return queue;
 }
 
-//5.this block just prints the links
 async function main(){
-    const links = await returnlink();
-    console.log(links);
-const queue = await crawlagain(returnlink);
 
-console.log(queue);
-console.log('hello')
+    await returnlink();// the the links of the first page of netflix is added to queue
+
+
+for(let i = 0;i<queue.length;i++){
+    if(!visited.has(queue[i])){
+        console.log("Queue size:", queue.length);
+        await crawlagain(queue[i])
+    }
 }
-
+console.log(queue);
+}
+ 
 main();
+
+
+//things to do later 
+//1.convert queue into a set from an array
