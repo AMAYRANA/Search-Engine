@@ -60,11 +60,22 @@ const title = $('title').text().trim()
 
 //getting text from body
 const text = $('body').text().trim();
-const result =  new Set(text.toLowerCase(). replace(/[^\w\s]|_/g, "").trim().split(/\s+/));//tokenization
+const words =  text.toLowerCase(). replace(/[^\w\s]|_/g, "").trim().split(/\s+/);//tokenization
+
+const frequency = new Map();
+for(const word of words)
+{
+    if(!frequency.has(word)){
+        frequency.set(word,1)
+    }
+    else{
+        frequency.set(word,frequency.get(word)+1)
+    }
+}
 
 return{ 
     title,
-  result
+  frequency
 };
 };
 
@@ -105,7 +116,7 @@ const stopwords = new Set([
   "you", "you'd", "you'll", "you're", "you've", "your", "yours",
   "yourself", "yourselves"
 ])
-for(const word of result)
+for(const [word,count] of result)
 {
     if(stopwords.has(word))
     {
@@ -119,9 +130,9 @@ return result;
 //Stemming
 function stem(result){
 const stemmer = natural.PorterStemmer;
-const stemmed = new Set();//new set containing the words of text
-for(const word of result){
-    stemmed.add(stemmer.stem(word));
+const stemmed = new Map();//new Map containing the words of text
+for(const [word,count]of result){
+    stemmed.set(stemmer.stem(word),count);
 
 }
 return stemmed;
@@ -155,7 +166,7 @@ async function crawlagain(link){
 
     visited.add(link);//pushed the link which is used ,into visited array
          const text = title_text(nxthtml)//this has title and text
-         let result = text.result;//set of words returned and stored into result
+         let result = text.frequency;//map of words returned and stored into result
           result = remove_stp(result);//remove stopwords
           result = stem(result);//stem them
 
@@ -168,7 +179,7 @@ $('a').each((index,element) =>{
          //const absoluteurl = new URL(url,'https://www.netflix.com/in/');
          const regex = /^http:\/\/|^https:\/\//i.test(url);
 
-        if(regex &&  !queue.includes(url) && queue.length<50)
+        if(regex &&  !queue.includes(url) && queue.length<10)
          queue.push(url);
      }
 
@@ -178,7 +189,7 @@ $('a').each((index,element) =>{
 catch(error){
     console.log('error ocoured =',error.message);
     console.log('error ocoured =',error.code);
-    return new Set();
+    return new Map();
 }
 }
 
@@ -189,14 +200,16 @@ async function main(){
 
 
 for(let i = 0; i<queue.length && i<
-    50;i++){
+    10;i++){
     if(!visited.has(queue[i])){
         console.log("Queue size:", queue.length);
+        console.log("current page:",i);
       let result =  await crawlagain(queue[i])//takes the first link from queue takes its links out and add them into queue and in visitid(set) also and repeat for next link
-      for(const word of result){
+      for(const [word, count] of result){
       documents.push({
        text:word,
-        id: i
+        id: i,
+        frequency:count
      });};
       
 
@@ -212,7 +225,9 @@ for(const doc of documents){
     if(!index.has(doc.text)){
        index.set(doc.text,[]);
     }
-    index.get(doc.text).push(doc.id);
+    index.get(doc.text).push({id:doc.id, count:doc.frequency
+        
+    });
 }
 console.log(index);
 
