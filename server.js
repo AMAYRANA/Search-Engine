@@ -248,34 +248,60 @@ for(let i = 0; i<queue.length && i<
 console.log(queue);
 }
 
+ function idf(index,totaldocument){
+
+    const idfmap = new Map();
+    for(const[word,value] of index){
+        const length = value.length;
+        idfmap.set(word,Math.log((totaldocument)/length))
+    }
+    return idfmap;
+}
+function tf_idf(tf,idfmap){
+
+    const tf_idfmap = new Map();
+    for(const[word,values] of tf ){
+         tf_idfmap.set(word,[])
+        for(const value of values){
+        tf_idfmap.get(word).push({id:value.id,tf_idf:(value.termfreq)*idfmap.get(word)})
+        }
+    }
+    return tf_idfmap;
+}
+
  
 
 async function start() {
     await main();
-    const index1 = new Map();
+    const index1 = new Map();// normal tf
     const index2 = new Map();
 for(const doc of document1){
     if(!index1.has(doc.text)){
        index1.set(doc.text,[]);
     }
-    index1.get(doc.text).push({id:doc.id, count:doc.frequency
-        
-    });
+    index1.get(doc.text).push({id:doc.id, count:doc.frequency});
 }
 
-for(const doc of document2){
+for(const doc of document2){//normalized tf
 if(!index2.has(doc.text)){
     index2.set(doc.text,[])
 }
 index2.get(doc.text).push({id:doc.id,termfreq:doc.tf})
 }
-console.log(index1);
-console.log(index2);
 
+const idfmap =  idf(index1,visited.size)
+const tf_idfmap = tf_idf(index2,idfmap)
+console.log(tf_idfmap)
+console.log(idfmap);
+console.log(index2);
+console.log(index1);
 
 }
 
 start();
+
+
+
 
 
 
