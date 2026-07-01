@@ -62,6 +62,7 @@ const title = $('title').text().trim()
 const text = $('body').text().trim();
 const words =  text.toLowerCase(). replace(/[^\w\s]|_/g, "").trim().split(/\s+/);//tokenization
 
+const t_freq = new Map();
 const frequency = new Map();
 for(const word of words)
 {
@@ -73,9 +74,13 @@ for(const word of words)
     }
 }
 
+for(const word of words){
+    t_freq.set(word,frequency.get(word)/words.length);
+}
 return{ 
     title,
-  frequency
+  frequency,
+  t_freq
 };
 };
 
@@ -132,9 +137,12 @@ function stem(result){
 const stemmer = natural.PorterStemmer;
 const stemmed = new Map();//new Map containing the words of text
 for(const [word,count]of result){
+    if(!stemmed.has(stemmer.stem(word))){
     stemmed.set(stemmer.stem(word),count);
-
-}
+    }
+    else{
+    stemmed.set(stemmer.stem(word),stemmed.get(stemmer.stem(word))+count)
+}}
 return stemmed;
 }
 
@@ -166,6 +174,9 @@ async function crawlagain(link){
 
     visited.add(link);//pushed the link which is used ,into visited array
          const text = title_text(nxthtml)//this has title and text
+         let t_freq = text.t_freq;// tf of a word in a document
+         t_freq = remove_stp(t_freq);
+         t_freq = stem(t_freq);
          let result = text.frequency;//map of words returned and stored into result
           result = remove_stp(result);//remove stopwords
           result = stem(result);//stem them
@@ -184,16 +195,24 @@ $('a').each((index,element) =>{
      }
 
 }); 
- return result;
+return{
+ result,
+ t_freq
+}
 }
 catch(error){
     console.log('error ocoured =',error.message);
     console.log('error ocoured =',error.code);
-    return new Map();
+    return {
+         result:new Map(),
+         t_freq:new Map()
 }
+    }
 }
 
-const documents = [];
+
+const document1 = [];
+const document2 = [];
 async function main(){
 
     await returnlink();// the links of the first page of netflix is added to queue
@@ -204,32 +223,54 @@ for(let i = 0; i<queue.length && i<
     if(!visited.has(queue[i])){
         console.log("Queue size:", queue.length);
         console.log("current page:",i);
-      let result =  await crawlagain(queue[i])//takes the first link from queue takes its links out and add them into queue and in visitid(set) also and repeat for next link
+      let words =  await crawlagain(queue[i])//takes the first link from queue takes its links out and add them into queue and in visitid(set) also and repeat for next link and returns the list of words for that specific page
+     let result = words.result;
+     let termfreq = words.t_freq;
       for(const [word, count] of result){
-      documents.push({
+      document1.push({
        text:word,
         id: i,
-        frequency:count
-     });};
+        frequency:count,
+     })}
+
+     for(const [word,t_freq] of termfreq){
+        document2.push({
+            text:word,
+            id:i,
+            tf:t_freq
+        })
+
+     }
+     ;
       
 
 }}
 console.log(queue);
 }
+
  
 
 async function start() {
     await main();
-    const index = new Map();
-for(const doc of documents){
-    if(!index.has(doc.text)){
-       index.set(doc.text,[]);
+    const index1 = new Map();
+    const index2 = new Map();
+for(const doc of document1){
+    if(!index1.has(doc.text)){
+       index1.set(doc.text,[]);
     }
-    index.get(doc.text).push({id:doc.id, count:doc.frequency
+    index1.get(doc.text).push({id:doc.id, count:doc.frequency
         
     });
 }
-console.log(index);
+
+for(const doc of document2){
+if(!index2.has(doc.text)){
+    index2.set(doc.text,[])
+}
+index2.get(doc.text).push({id:doc.id,termfreq:doc.tf})
+}
+console.log(index1);
+console.log(index2);
 
 
 }
